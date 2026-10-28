@@ -51,12 +51,12 @@ function SvgIcon({ iconId, colorId, muted = false, size = 18 }) {
 function LeadingIcon({ sessionId }) {
   const { assignments: current } = useView()
   const value = current[sessionId]
-  const label = value ? '切换会话图标' : '设置会话图标'
+  if (!value) return null
   return h('button', {
-    type: 'button', className: value ? 'dsi-leading dsi-leading-chosen' : 'dsi-leading dsi-leading-default',
-    'aria-label': label, title: label, onPointerDown: stop,
+    type: 'button', className: 'dsi-leading dsi-leading-chosen',
+    'aria-label': '切换会话图标', title: '切换会话图标', onPointerDown: stop,
     onClick(event) { stop(event); openPicker(sessionId) },
-  }, h(SvgIcon, { iconId: value?.icon ?? 'sparkles', colorId: value?.color ?? 'blue', muted: !value }))
+  }, h(SvgIcon, { iconId: value.icon, colorId: value.color, size: 14 }))
 }
 
 function SessionIconMenuItem({ sessionId, displayTitle, useMenuOpenState }) {
@@ -73,10 +73,14 @@ function PickerOverlay() {
   const view = useView()
   const pending = view.request
   const value = pending ? view.assignments[pending.sessionId] : undefined
-  const selectedIcon = value?.icon ?? 'sparkles'
+  const selectedIcon = value?.icon ?? null
   const selectedColor = value?.color ?? 'blue'
-  const chooseIcon = useCallback((icon) => pending && updateAssignment(pending.sessionId, { icon, color: selectedColor }), [pending, selectedColor])
-  const chooseColor = useCallback((color) => pending && updateAssignment(pending.sessionId, { icon: selectedIcon, color }), [pending, selectedIcon])
+  const chooseIcon = useCallback((icon) => {
+    if (!pending) return
+    if (icon === null) removeAssignment(pending.sessionId)
+    else updateAssignment(pending.sessionId, { icon, color: selectedColor })
+  }, [pending, selectedColor])
+  const chooseColor = useCallback((color) => pending && selectedIcon && updateAssignment(pending.sessionId, { icon: selectedIcon, color }), [pending, selectedIcon])
   const title = useMemo(() => pending?.displayTitle ? `设置“${pending.displayTitle}”的图标` : '设置会话图标', [pending])
 
   return h(Modal, {
@@ -87,17 +91,24 @@ function PickerOverlay() {
   }, h('div', { className: 'dsi-picker' },
     h('section', { 'aria-labelledby': 'dsi-icons-heading' },
       h('h3', { id: 'dsi-icons-heading', className: 'dsi-heading' }, '选择图标'),
-      h('div', { className: 'dsi-icon-grid', role: 'radiogroup', 'aria-label': '会话图标' }, ICONS.map((icon) => h('button', {
-        key: icon.id, type: 'button', className: selectedIcon === icon.id ? 'dsi-icon-choice dsi-selected' : 'dsi-icon-choice',
-        role: 'radio', 'aria-checked': selectedIcon === icon.id, 'aria-label': icon.label, title: icon.label,
-        onClick: () => chooseIcon(icon.id),
-      }, h(SvgIcon, { iconId: icon.id, colorId: selectedColor, size: 22 }))))),
+      h('div', { className: 'dsi-icon-grid', role: 'radiogroup', 'aria-label': '会话图标' }, [
+        h('button', {
+          key: 'none', type: 'button', className: selectedIcon === null ? 'dsi-icon-choice dsi-icon-none dsi-selected' : 'dsi-icon-choice dsi-icon-none',
+          role: 'radio', 'aria-checked': selectedIcon === null, 'aria-label': '不设置图标', title: '不设置图标',
+          onClick: () => chooseIcon(null),
+        }, h('span', { className: 'dsi-none-mark', 'aria-hidden': 'true' })),
+        ...ICONS.map((icon) => h('button', {
+          key: icon.id, type: 'button', className: selectedIcon === icon.id ? 'dsi-icon-choice dsi-selected' : 'dsi-icon-choice',
+          role: 'radio', 'aria-checked': selectedIcon === icon.id, 'aria-label': icon.label, title: icon.label,
+          onClick: () => chooseIcon(icon.id),
+        }, h(SvgIcon, { iconId: icon.id, colorId: selectedColor, size: 22 }))),
+      ])),
     h('section', { 'aria-labelledby': 'dsi-colors-heading' },
       h('h3', { id: 'dsi-colors-heading', className: 'dsi-heading' }, '选择颜色'),
       h('div', { className: 'dsi-color-grid', role: 'radiogroup', 'aria-label': '图标颜色' }, COLORS.map((color) => h('button', {
-        key: color.id, type: 'button', className: selectedColor === color.id ? 'dsi-color-choice dsi-selected' : 'dsi-color-choice',
-        role: 'radio', 'aria-checked': selectedColor === color.id, 'aria-label': color.label, title: color.label,
-        style: { '--dsi-color': color.value }, onClick: () => chooseColor(color.id),
+        key: color.id, type: 'button', className: selectedColor === color.id && selectedIcon ? 'dsi-color-choice dsi-selected' : 'dsi-color-choice',
+        role: 'radio', 'aria-checked': Boolean(selectedIcon && selectedColor === color.id), 'aria-label': color.label, title: selectedIcon ? color.label : '请先选择图标',
+        disabled: !selectedIcon, style: { '--dsi-color': color.value }, onClick: () => chooseColor(color.id),
       }, h('span', { className: 'dsi-color-dot', 'aria-hidden': 'true' })))))))
 }
 
@@ -106,14 +117,15 @@ function ensureStyles() {
   const style = document.createElement('style')
   style.dataset.pluginCss = 'dsh-session-icons'
   style.textContent = `
-.dsi-leading{width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;padding:0;border:0;border-radius:var(--dsw-radius-xs);background:transparent;cursor:pointer;pointer-events:auto;transition:opacity .12s ease,background .12s ease}
-.dsi-leading:hover,.dsi-leading:focus-visible{background:var(--dsw-alias-interactive-bg-hover);outline:none}.dsi-leading-default{opacity:0}:is([data-session-id],li,div):hover>.dsi-leading-default,:is([data-session-id],li,div):focus-within>.dsi-leading-default,.dsi-leading-default:hover,.dsi-leading-default:focus-visible,.dsi-leading-chosen{opacity:1}
-.dsi-svg{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}.dsi-svg svg{display:block;width:100%;height:100%}
-.dsi-modal{width:min(560px,calc(100vw - 32px))}.dsi-picker{display:grid;gap:22px;padding:2px 0 6px}.dsi-heading{margin:0 0 10px;color:var(--dsw-alias-label-secondary);font-size:13px;font-weight:600}
+.dsi-leading{width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;padding:0;border:0;border-radius:var(--dsw-radius-xs);background:transparent;cursor:pointer;pointer-events:auto;transition:opacity .12s ease,background .12s ease}
+.dsi-leading:hover,.dsi-leading:focus-visible{background:var(--dsw-alias-interactive-bg-hover);outline:none}.dsi-leading-chosen{opacity:1}
+.dsi-svg{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}.dsi-svg svg{display:block;width:100%;height:100%}.dsi-duo-fill{fill:currentColor;opacity:.18}.dsi-duo-primary,.dsi-duo-secondary{stroke:currentColor;opacity:1;stroke-width:1.8}
+.dsi-modal{width:min(590px,calc(100vw - 32px))}.dsi-picker{display:grid;gap:22px;padding:2px 0 6px}.dsi-heading{margin:0 0 10px;color:var(--dsw-alias-label-secondary);font-size:13px;font-weight:600}
 .dsi-icon-grid{display:grid;grid-template-columns:repeat(8,minmax(42px,1fr));gap:8px}.dsi-icon-choice,.dsi-color-choice{border:1px solid transparent;background:var(--dsw-alias-bg-layer-2);cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
 .dsi-icon-choice{height:44px;border-radius:var(--dsw-radius-sm)}.dsi-icon-choice:hover,.dsi-color-choice:hover{background:var(--dsw-alias-interactive-bg-hover)}.dsi-selected{border-color:var(--dsw-alias-border-primary);box-shadow:0 0 0 2px var(--dsw-alias-interactive-bg-hover)}
-.dsi-icon-choice:focus-visible,.dsi-color-choice:focus-visible{outline:2px solid var(--dsw-alias-label-primary);outline-offset:2px}.dsi-color-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:9px}.dsi-color-choice{aspect-ratio:1;border-radius:999px;padding:4px;background:transparent}
-.dsi-color-dot{width:100%;height:100%;min-width:22px;min-height:22px;border-radius:999px;background:var(--dsi-color);box-shadow:inset 0 0 0 1px rgb(0 0 0/.12)}.dsi-footer{display:flex;gap:8px;justify-content:flex-end;width:100%}
+.dsi-icon-none{color:var(--dsw-alias-label-tertiary)}.dsi-none-mark{width:19px;height:19px;border:1.8px solid #9ca3af;border-radius:50%;position:relative}.dsi-none-mark::after{content:'';position:absolute;left:2px;right:2px;top:7.7px;height:1.8px;background:#9ca3af;transform:rotate(-45deg);transform-origin:center}
+.dsi-icon-choice:focus-visible,.dsi-color-choice:focus-visible{outline:2px solid var(--dsw-alias-label-primary);outline-offset:2px}.dsi-color-grid{display:grid;grid-template-columns:repeat(9,1fr);gap:9px}.dsi-color-choice{aspect-ratio:1.45;border-radius:var(--dsw-radius-sm);padding:4px;background:transparent}
+.dsi-color-choice:disabled{opacity:.45;cursor:not-allowed}.dsi-color-dot{width:100%;height:100%;min-width:22px;min-height:22px;border-radius:999px;background:var(--dsi-color);box-shadow:inset 0 0 0 1px rgb(0 0 0/.12)}.dsi-footer{display:flex;gap:8px;justify-content:flex-end;width:100%}
 @media(max-width:520px){.dsi-icon-grid{grid-template-columns:repeat(4,1fr)}.dsi-color-grid{grid-template-columns:repeat(5,1fr)}}`
   document.head.appendChild(style)
 }

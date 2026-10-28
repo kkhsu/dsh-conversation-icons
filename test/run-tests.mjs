@@ -14,18 +14,22 @@ test('公开稳定的工具名与客户端事件名', () => {
   assert.equal(TOOL_NAME, 'dsh_session_icons_assign')
   assert.equal(CLIENT_EVENT, 'dsh-session-icons:assign')
 })
-test('调色板恰好包含 20 种唯一颜色', () => {
-  assert.equal(COLORS.length, 20)
-  assert.equal(new Set(COLORS.map((item) => item.id)).size, 20)
-  assert.equal(new Set(COLORS.map((item) => item.value)).size, 20)
+test('调色板包含 18 种唯一且区分明显的颜色', () => {
+  assert.equal(COLORS.length, 18)
+  assert.equal(new Set(COLORS.map((item) => item.id)).size, 18)
+  assert.equal(new Set(COLORS.map((item) => item.value)).size, 18)
+  assert.deepEqual(COLORS.map((item) => item.value), ['#111827','#64748b','#cbd5e1','#ef4444','#f97316','#eab308','#84cc16','#16a34a','#10b981','#14b8a6','#06b6d4','#0284c7','#2563eb','#4f46e5','#7c3aed','#c026d3','#db2777','#92400e'])
 })
-test('所有图标都使用可解析的内联 SVG', () => {
-  assert.ok(ICONS.length >= 16)
+test('图标库包含最终预览顺序的 31 个双色常用图标', () => {
+  assert.equal(ICONS.length, 31)
+  assert.deepEqual(ICONS.map((item) => item.id), ['flame','star','heart','bookmark','idea','code','bolt','document','folder','chat','check','palette','target','calendar','play','clock','search','mail','image','database','settings','user','shield','home','cloud','pin','lock','bell','flag','gift','briefcase'])
   assert.equal(new Set(ICONS.map((item) => item.id)).size, ICONS.length)
   assert.ok(ICONS.every((item) => item.id && item.label && item.svg.startsWith('<svg') && item.svg.endsWith('</svg>')))
+  assert.ok(ICONS.every((item) => item.svg.includes('dsi-duo-fill') && item.svg.includes('dsi-duo-primary') && item.svg.includes('dsi-duo-secondary')))
+  assert.ok(ICONS.every((item) => item.svg.includes('stroke="none"')))
 })
-test('只接受已知图标和颜色的会话配置', () => {
-  assert.deepEqual(normalizeAssignments({ valid: { icon: 'star', color: 'rose' }, badIcon: { icon: 'unknown', color: 'blue' }, badColor: { icon: 'star', color: 'unknown' }, empty: null }), { valid: { icon: 'star', color: 'rose' } })
+test('只接受已知图标和颜色并迁移旧配置', () => {
+  assert.deepEqual(normalizeAssignments({ valid: { icon: 'star', color: 'pink' }, legacy: { icon: 'sparkles', color: 'rose' }, badIcon: { icon: 'unknown', color: 'blue' }, badColor: { icon: 'star', color: 'unknown' }, empty: null }), { valid: { icon: 'star', color: 'pink' }, legacy: { icon: 'flame', color: 'pink' } })
 })
 test('工具载荷会校验会话、图标和颜色', () => {
   assert.deepEqual(createAssignPayload('session-1', 'code', 'blue'), { sessionId: 'session-1', icon: 'code', color: 'blue' })

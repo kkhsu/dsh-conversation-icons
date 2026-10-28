@@ -1,6 +1,6 @@
 {
   "name": "dsh-conversation-icons",
-  "version": "0.2.0",
+  "version": "0.2.6",
   "description": "为 DSH 会话设置自定义 SVG 图标和颜色，并支持模型工具调用",
   "type": "module",
   "main": "lib/index.js",
@@ -17,15 +17,31 @@
     "dsh": ">=0.2.1-0 <0.3.0"
   },
   "dsh": {
-    "bundle": { "patch": "./cordis.patch.yml" },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
     "client": {
-      "inject": ["@deepseek-ai/dsh-client-ui-slots"],
+      "inject": [],
+      "external": [
+        "@deepseek-ai/dsh-client-ui-primitives"
+      ],
       "platform": "web"
     },
     "manifestVersion": 1,
-    "permissions": ["browser:storage"]
+    "permissions": [
+      "browser:storage"
+    ]
   },
-  "files": ["lib", "src", "test", "cordis.patch.yml", "locale/*.json", "icon.svg", "README.md", "LICENSE"],
+  "files": [
+    "lib",
+    "src",
+    "test",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "node scripts/build.mjs",
     "test": "node test/run-tests.mjs",
@@ -41,5 +57,12 @@
   "devDependencies": {},
   "packageManager": "pnpm@11.7.0",
   "license": "MIT",
-  "keywords": ["deepseek-harness", "dsh", "client-plugin", "session", "icons", "svg"]
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "client-plugin",
+    "session",
+    "icons",
+    "svg"
+  ]
 }
